@@ -1,7 +1,7 @@
 import google.generativeai as genai
 import os
 from dotenv import load_dotenv
-from .search import search_engine
+from search import search_engine
 
 load_dotenv() # Load variables from .env
 

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import SearchBar from './components/SearchBar';
 import ResultCard from './components/ResultCard';
+import { themes } from './themeConfig';
+import { Square, Cat, Dog, Leaf } from 'lucide-react';
 
 function App() {
     const [results, setResults] = useState([]);
@@ -9,6 +11,10 @@ function App() {
     const [activeTab, setActiveTab] = useState('local'); // 'local' | 'web' | 'chat'
     const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
     const [chatResponse, setChatResponse] = useState('');
+
+    // Dynamic theme
+    const [theme, setTheme] = useState('nature');
+    const t = themes[theme] || themes.nature;
 
     const saveApiKey = (key) => {
         setApiKey(key);
@@ -28,9 +34,8 @@ function App() {
             } else if (activeTab === 'web') {
                 const response = await fetch(`/api/web-search?q=${encodeURIComponent(query)}`);
                 const data = await response.json();
-                setResults(data); // Web results should match/adapt to ResultCard structure or we create a new one
+                setResults(data);
             } else if (activeTab === 'chat') {
-                // Send request even if apiKey is empty, backend might have a default env var
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -51,9 +56,7 @@ function App() {
         try {
             const response = await fetch('/api/scan', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ path }),
             });
             const data = await response.json();
@@ -65,128 +68,164 @@ function App() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 p-8">
-            <div className="max-w-4xl mx-auto">
-                <header className="mb-8 text-center">
-                    <h1 className="text-4xl font-bold text-slate-900 mb-2">Libris</h1>
-                    <p className="text-slate-500">Your intelligent PDF companion</p>
+        <div className={`min-h-screen font-sans transition-colors duration-500 relative flex flex-col ${t.bg}`}>
+            {/* Watermark / Background Image */}
+            {t.backgroundImage && (
+                t.bgRepeat ? (
+                    <div className="fixed inset-0 z-0 opacity-10 pointer-events-none select-none"
+                        style={{ backgroundImage: `url(${t.backgroundImage})`, backgroundRepeat: 'space', backgroundSize: '150px' }}
+                    ></div>
+                ) : (
+                    <div className="fixed bottom-0 right-0 p-8 z-0 opacity-20 pointer-events-none select-none">
+                        <img src={t.backgroundImage} alt="" className="w-48 h-auto object-contain drop-shadow-lg" />
+                    </div>
+                )
+            )}
+
+            <div className="relative z-10 max-w-4xl mx-auto w-full p-4 sm:p-8 flex-grow">
+                <header className="mb-8 text-center pt-8 relative">
+                    <div className="absolute top-0 right-0 flex gap-2">
+                        {Object.values(themes).map(th => {
+                            const IconComponent = { square: Square, cat: Cat, dog: Dog, leaf: Leaf }[th.icon] || Square;
+                            return (
+                                <button
+                                    key={th.id}
+                                    onClick={() => setTheme(th.id)}
+                                    className={`p-2 rounded-full border transition-all ${theme === th.id ? 'scale-110 shadow-md ' + t.ringColor : 'opacity-70 hover:opacity-100'} ${th.id === 'default' ? 'bg-gray-800' : th.id === 'kitten' ? 'bg-pink-300' : th.id === 'puppy' ? 'bg-amber-300' : 'bg-emerald-300'}`}
+                                    title={th.label}
+                                >
+                                    {th.customIcon ? (
+                                        <img src={th.customIcon} alt={th.label} className="w-5 h-5 rounded-full object-cover" />
+                                    ) : (
+                                        <IconComponent size={16} className={th.id === 'default' ? 'text-white' : 'text-gray-800'} />
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <h1 className={`text-6xl font-black bg-clip-text text-transparent bg-gradient-to-r ${t.titleGradient} mb-2`}>
+                        Libris
+                    </h1>
+                    <p className={`${t.text} opacity-80 font-medium`}>Tu compañero inteligente para PDFs</p>
                 </header>
 
                 {/* Tabs */}
                 <div className="flex justify-center gap-4 mb-8">
                     <button
                         onClick={() => setActiveTab('local')}
-                        className={`px-4 py-2 rounded-full font-medium transition-colors ${activeTab === 'local' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
+                        className={`px-5 py-2 rounded-full font-medium transition-all transform hover:scale-105 ${activeTab === 'local' ? t.buttonPrimary : t.buttonSecondary}`}
                     >
-                        Local Library
+                        Biblioteca Local
                     </button>
                     <button
                         onClick={() => setActiveTab('web')}
-                        className={`px-4 py-2 rounded-full font-medium transition-colors ${activeTab === 'web' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
+                        className={`px-5 py-2 rounded-full font-medium transition-all transform hover:scale-105 ${activeTab === 'web' ? t.buttonPrimary : t.buttonSecondary}`}
                     >
-                        Web Search
+                        Búsqueda Web
                     </button>
                     <button
                         onClick={() => setActiveTab('chat')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-colors ${activeTab === 'chat' ? 'bg-purple-600 text-white' : 'bg-white text-purple-600 hover:bg-purple-50'}`}
+                        className={`flex items-center gap-2 px-5 py-2 rounded-full font-medium transition-all transform hover:scale-105 ${activeTab === 'chat' ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/30' : t.buttonSecondary}`}
                     >
-                        <span>✨ Ask AI</span>
+                        <span>✨ Preguntar a IA</span>
                     </button>
                 </div>
 
-                {/* API Key Settings (Only visible in Chat mode if key missing, or always somewhere tiny? Let's put it in a details block for now) */}
-                {activeTab === 'chat' && (
-                    <div className="mb-6 max-w-md mx-auto">
-                        <input
-                            type="password"
-                            placeholder="Enter Google Gemini API Key"
-                            value={apiKey}
-                            onChange={(e) => saveApiKey(e.target.value)}
-                            className="w-full px-4 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
-                        />
-                        <p className="text-xs text-center text-slate-400 mt-1">Key is saved in your browser.</p>
-                    </div>
-                )}
-
-                <SearchBar onSearch={handleSearch} />
-
-                {/* Scan Settings (Only in Local mode) */}
-                {activeTab === 'local' && (
-                    <div className="mb-8 p-4 bg-white rounded-lg shadow-sm border border-slate-200">
-                        <h2 className="text-lg font-semibold mb-4">Library Settings</h2>
-                        <div className="flex gap-2">
+                <div className={`backdrop-blur-md rounded-2xl p-6 shadow-xl border border-white/5 ${t.card}`}>
+                    {/* API Key Settings */}
+                    {activeTab === 'chat' && (
+                        <div className="mb-6 max-w-md mx-auto">
                             <input
-                                type="text"
-                                placeholder="Enter folder path to scan (e.g., C:\Books)"
-                                className="flex-1 px-4 py-2 border rounded"
-                                id="scanPath"
-
+                                type="password"
+                                placeholder="Google Gemini API Key (Opcional si ya configurada)"
+                                value={apiKey}
+                                onChange={(e) => saveApiKey(e.target.value)}
+                                className={`w-full px-4 py-2 text-sm rounded-lg outline-none ${t.input}`}
                             />
-                            <button
-                                onClick={() => handleScan(document.getElementById('scanPath').value)}
-                                className="px-4 py-2 bg-slate-800 text-white rounded hover:bg-slate-900"
-                            >
-                                Scan Library
-                            </button>
                         </div>
-                        {scanStatus && <p className="mt-2 text-sm text-slate-600">{scanStatus}</p>}
-                    </div>
-                )}
+                    )}
+
+                    <SearchBar onSearch={handleSearch} theme={t} />
+
+                    {/* Scan Settings */}
+                    {activeTab === 'local' && (
+                        <div className={`mt-8 p-4 rounded-xl border ${t.header}`}>
+                            <h2 className={`text-sm font-semibold mb-3 ${t.headerText}`}>Escanear Carpeta</h2>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="Ruta de carpeta (ej: C:\Libros)"
+                                    className={`flex-1 px-4 py-2 rounded-lg outline-none ${t.input}`}
+                                    id="scanPath"
+                                />
+                                <button
+                                    onClick={() => handleScan(document.getElementById('scanPath').value)}
+                                    className={`px-4 py-2 rounded-lg transition-colors ${t.buttonSecondary}`}
+                                >
+                                    Escanear
+                                </button>
+                            </div>
+                            {scanStatus && <p className={`mt-2 text-sm ${t.highlight}`}>{scanStatus}</p>}
+                        </div>
+                    )}
+                </div>
 
                 {/* Content Area */}
-                <div className="space-y-4 pb-20">
+                <div className="mt-8 space-y-4 pb-20">
                     {loading && (
                         <div className="text-center py-12">
-                            <div className={`animate-spin rounded-full h-12 w-12 border-b-2 mx-auto ${activeTab === 'chat' ? 'border-purple-600' : 'border-blue-600'}`}></div>
+                            <div className={`animate-spin rounded-full h-12 w-12 border-b-2 mx-auto ${t.text} border-current opacity-50`}></div>
+                            <p className={`mt-4 ${t.text} opacity-70`}>Buscando...</p>
                         </div>
                     )}
 
                     {/* Chat Response */}
                     {!loading && activeTab === 'chat' && chatResponse && (
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-purple-100">
-                            <h3 className="text-sm font-bold text-purple-600 uppercase tracking-wide mb-2">AI Response</h3>
-                            <div className="prose prose-slate max-w-none whitespace-pre-wrap">
+                        <div className={`p-6 rounded-xl shadow-lg border border-purple-500/30 bg-purple-900/20 backdrop-blur-sm`}>
+                            <h3 className="text-sm font-bold text-purple-300 uppercase tracking-wide mb-2">Respuesta IA</h3>
+                            <div className={`prose max-w-none whitespace-pre-wrap ${t.text}`}>
                                 {chatResponse}
                             </div>
                         </div>
                     )}
 
-                    {/* Search Results (Local & Web) */}
+                    {/* Search Results */}
                     {!loading && activeTab !== 'chat' && (
                         results.map((result, index) => (
                             activeTab === 'web' ? (
-                                // Web Result Card (Inline simply for now)
-                                <div key={index} className="p-4 bg-white rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-                                    <h3 className="text-lg font-semibold text-blue-600 truncate">
+                                <div key={index} className={`p-4 rounded-xl shadow-md border transition-all hover:scale-[1.01] ${t.card}`}>
+                                    <h3 className={`text-lg font-bold truncate ${t.highlight}`}>
                                         <a href={result.url} target="_blank" rel="noopener noreferrer">{result.title}</a>
                                     </h3>
-                                    <p className="text-xs text-green-700 mb-1">{result.url}</p>
-                                    <p className="text-sm text-slate-600">{result.snippet}</p>
+                                    <p className={`text-xs opacity-60 mb-2 ${t.text}`}>{result.url}</p>
+                                    <p className={`text-sm opacity-90 ${t.text}`}>{result.snippet}</p>
                                 </div>
                             ) : (
-                                // Local Result Card
-                                <ResultCard
-                                    key={`${result.filename}-${result.page}-${index}`}
-                                    result={result}
-                                    onClick={() => console.log('Clicked', result)}
-                                />
+                                <div key={`${result.filename}-${result.page}-${index}`} className={`p-4 rounded-xl shadow-md border transition-all hover:scale-[1.01] ${t.card}`}>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h3 className={`text-md font-bold ${t.headerText}`}>{result.filename}</h3>
+                                        <span className={`text-xs px-2 py-1 rounded-full ${t.buttonSecondary}`}>Pág {result.page}</span>
+                                    </div>
+                                    <p className={`text-sm italic opacity-80 ${t.text}`}>"...{result.snippet}..."</p>
+                                </div>
                             )
                         ))
                     )}
 
                     {!loading && !chatResponse && results.length === 0 && (
-                        <p className="text-center text-slate-400 py-12">
-                            {activeTab === 'chat' ? 'Ask me anything about your books!' : 'Ready to search.'}
-                        </p>
+                        <div className="text-center py-12 opacity-50">
+                            <p className={t.text}>{activeTab === 'chat' ? 'Pregúntale a tus libros...' : 'Listo para buscar.'}</p>
+                        </div>
                     )}
                 </div>
             </div>
 
-            <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 text-center text-slate-500 text-sm">
-                <p>&copy; 2026 Adamo. Libris v1.0. All rights reserved.</p>
+            <footer className={`w-full text-center p-8 mt-auto text-xs opacity-60 ${t.text} relative z-10`}>
+                <p>Libris v1.0 &copy; {new Date().getFullYear()} Adamo. All rights reserved.</p>
             </footer>
         </div>
     );
 }
 
 export default App;
+

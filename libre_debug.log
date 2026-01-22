@@ -1,0 +1,29 @@
+INFO:     Started server process [1940]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+Script started...
+Waiting for server to start before opening tunnel...
+Starting Libris Server on port 8001...
+Local access: http://localhost:8001 or http://192.168.0.6:8001
+Opening browser in 3 seconds...
+Connecting Ngrok to 127.0.0.1:8001...
+INFO:     127.0.0.1:61468 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61468 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+
+CRITICAL ERROR starting Ngrok: The ngrok process was unable to start.
+------------------------------------------------------------
+INFO:     127.0.0.1:49429 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49461 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49461 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49463 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49517 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49517 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49598 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65512 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49170 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49176 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49231 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49231 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49424 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49424 - "GET /favicon.ico HTTP/1.1" 404 Not Found

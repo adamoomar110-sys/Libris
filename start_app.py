@@ -64,7 +64,14 @@ if __name__ == "__main__":
         # actually, let's COMMENT OUT ngrok.kill() to allow running both simultaneously if user wants.
         # ngrok.kill() 
             
-        backend_dir = os.path.join(os.path.dirname(__file__), "backend")
+        # Ensure backend directory is in path
+        if getattr(sys, 'frozen', False):
+             # Running as compiled exe
+             base_dir = sys._MEIPASS
+        else:
+             base_dir = os.path.dirname(os.path.abspath(__file__))
+             
+        backend_dir = os.path.join(base_dir, "backend")
         sys.path.append(backend_dir)
         
         # Start Ngrok
@@ -99,5 +106,5 @@ if __name__ == "__main__":
         import traceback
         traceback.print_exc()
     finally:
-        print("\nApp exited. Press Enter to close window...")
-        input()
+        while True:
+            time.sleep(1)
