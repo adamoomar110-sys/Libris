@@ -6,11 +6,12 @@ from pyngrok import ngrok, conf
 import threading
 import time
 import socket
+import argparse
 
 # --- CONFIGURATION ---
 PORT = 8001  # Different port for Libris
-# Reuse Amori's token if available or let ngrok manage it
-NGROK_AUTH_TOKEN = "38IbyMFFZNBfyHUuqpDbZTPgIn0_6KyYqSjYSgFBy8gzRGEqw" 
+# Use the second account token provided by the user
+NGROK_AUTH_TOKEN = "38cZZ5NMUYqvzMVhHXOEXmUMPel_7KCxuU4VM6Caf5MQe1TH7" 
 
 def start_ngrok_thread():
     print("Waiting for server to start before opening tunnel...")
@@ -41,7 +42,8 @@ def start_ngrok_thread():
             pass
             
     except Exception as e:
-        print(f"\nCRITICAL ERROR starting Ngrok: {e}")
+        print(f"\nWARNING: Ngrok tunnel failed: {e}")
+        print("App will still work locally at http://localhost:8001")
         print("-" * 60)
 
 def get_local_ip():
@@ -56,12 +58,12 @@ def get_local_ip():
     return IP
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Start Libris App")
+    parser.add_argument('--mode', choices=['web', 'mobile'], default='web', help="Startup mode: 'web' for local PC, 'mobile' for remote access via Ngrok")
+    args = parser.parse_args()
+
     try:
-        # We don't necessarily want to kill ngrok global, but for this script ensuring clean slate is ok
-        # However, if both apps run, we shouldn't kill globally. 
-        # Removing ngrok.kill() or scoped to this process would be better, but pyngrok is global.
-        # Let's keep it simple: assume user runs one "Share" session or doesn't mind restart.
-        # actually, let's COMMENT OUT ngrok.kill() to allow running both simultaneously if user wants.
+        # Don't kill ngrok automatically, allowing parallel apps
         # ngrok.kill() 
             
         # Ensure backend directory is in path
@@ -72,28 +74,55 @@ if __name__ == "__main__":
              base_dir = os.path.dirname(os.path.abspath(__file__))
              
         backend_dir = os.path.join(base_dir, "backend")
+        frontend_dist = os.path.join(base_dir, "frontend", "dist")
+        
+        # Validate frontend build exists
+        if not os.path.exists(frontend_dist):
+            print("\n" + "!"*60)
+            print("ERROR: Frontend not built!")
+            print(f"Expected path: {frontend_dist}")
+            print("\nPlease run: cd frontend && npm run build")
+            print("!"*60 + "\n")
+            input("Press Enter to exit...")
+            sys.exit(1)
+            
+        index_html = os.path.join(frontend_dist, "index.html")
+        if not os.path.exists(index_html):
+            print("\n" + "!"*60)
+            print("ERROR: index.html not found in frontend/dist!")
+            print(f"Expected: {index_html}")
+            print("!"*60 + "\n")
+            input("Press Enter to exit...")
+            sys.exit(1)
+        
+        print(f"Frontend build verified at: {frontend_dist}")
         sys.path.append(backend_dir)
         
-        # Start Ngrok
-        t = threading.Thread(target=start_ngrok_thread)
-        t.daemon = True
-        t.start()
+        # --- MODE HANDLING ---
+        print(f"Starting in {args.mode.upper()} mode...")
+
+        if args.mode == 'mobile':
+            # Start Ngrok
+            t = threading.Thread(target=start_ngrok_thread)
+            t.daemon = True
+            t.start()
         
         print(f"Starting Libris Server on port {PORT}...")
         local_ip = get_local_ip()
         local_url = f"http://localhost:{PORT}"
         print(f"Local access: {local_url} or http://{local_ip}:{PORT}")
 
-        # Auto-open browser
-        import webbrowser
-        def open_browser():
-            print("Opening browser in 3 seconds...")
-            time.sleep(3)
-            webbrowser.open(local_url)
-        
-        wb_thread = threading.Thread(target=open_browser)
-        wb_thread.daemon = True
-        wb_thread.start()
+        # Auto-open browser ONLY IF mode is WEB
+        if args.mode == 'web':
+            import webbrowser
+            def open_browser():
+                print("Opening browser in 3 seconds...")
+                time.sleep(3)
+                webbrowser.open(local_url)
+            
+            wb_thread = threading.Thread(target=open_browser)
+            wb_thread.daemon = True
+            wb_thread.start()
         
         os.chdir(backend_dir)
         
@@ -105,6 +134,8 @@ if __name__ == "__main__":
         print("!"*60 + "\n")
         import traceback
         traceback.print_exc()
+        input("\nPress Enter to exit...")
     finally:
-        while True:
-            time.sleep(1)
+        # Keep window open for debugging
+        pass
+

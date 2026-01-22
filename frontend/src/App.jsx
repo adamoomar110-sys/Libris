@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import SearchBar from './components/SearchBar';
 import ResultCard from './components/ResultCard';
 import { themes } from './themeConfig';
@@ -11,30 +11,126 @@ function App() {
     const [activeTab, setActiveTab] = useState('local'); // 'local' | 'web' | 'chat'
     const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
     const [chatResponse, setChatResponse] = useState('');
+    const [aiResponse, setAiResponse] = useState('');
+    const [isAiProcessing, setIsAiProcessing] = useState(false);
+    const [library, setLibrary] = useState([]);
+    const [showLibrary, setShowLibrary] = useState(true);
+    const [isUploading, setIsUploading] = useState(false);
+    const [selectedBook, setSelectedBook] = useState(null);
+    const [bookSummary, setBookSummary] = useState(null);
+    const [savedUrls, setSavedUrls] = useState(new Set());
 
     // Dynamic theme
     const [theme, setTheme] = useState('nature');
     const t = themes[theme] || themes.nature;
 
-    const saveApiKey = (key) => {
-        setApiKey(key);
-        localStorage.setItem('gemini_api_key', key);
+    useEffect(() => {
+        fetchLibrary();
+    }, []);
+
+    const fetchLibrary = async () => {
+        try {
+            const response = await fetch('/api/library');
+            const data = await response.json();
+            setLibrary(data);
+        } catch (error) {
+            console.error('Failed to fetch library:', error);
+        }
+    };
+
+    const handleUpload = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData,
+            });
+            await response.json();
+            fetchLibrary();
+        } catch (error) {
+            console.error('Upload failed:', error);
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const handleDelete = async (docId) => {
+        if (!window.confirm('¿Eliminar este libro de la biblioteca?')) return;
+        try {
+            await fetch(`/api/delete/${docId}`, { method: 'DELETE' });
+            fetchLibrary();
+        } catch (error) {
+            console.error('Delete failed:', error);
+        }
+    };
+
+    const handleSummarize = async (docId) => {
+        setBookSummary('Generando resumen...');
+        setIsAiProcessing(true);
+        try {
+            const response = await fetch(`/api/summarize/${docId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: 'Resumir', api_key: apiKey || null })
+            });
+            const data = await response.json();
+            setBookSummary(data.summary);
+        } catch (error) {
+            setBookSummary('Error al generar resumen.');
+        } finally {
+            setIsAiProcessing(false);
+        }
+    };
+
+    const handleTranslate = async (docId) => {
+        setIsAiProcessing(true);
+        try {
+            await fetch(`/api/translate/${docId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: 'Traducir', api_key: apiKey || null })
+            });
+            alert('Traducción completada y guardada.');
+            fetchLibrary();
+        } catch (error) {
+            console.error('Translation failed:', error);
+        } finally {
+            setIsAiProcessing(false);
+        }
     };
 
     const handleSearch = async (query) => {
         setLoading(true);
         setResults([]);
         setChatResponse('');
+        setAiResponse('');
+        setIsAiProcessing(true);
 
         try {
             if (activeTab === 'local') {
-                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                const response = await fetch('/api/intelligent-search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, api_key: apiKey || null })
+                });
                 const data = await response.json();
-                setResults(data);
+                setResults(data.results || []);
+                setAiResponse(data.ai_response || '');
             } else if (activeTab === 'web') {
-                const response = await fetch(`/api/web-search?q=${encodeURIComponent(query)}`);
+                const response = await fetch('/api/intelligent-web-search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, api_key: apiKey || null })
+                });
                 const data = await response.json();
-                setResults(data);
+                setResults(data.results || []);
+                setAiResponse(data.ai_response || '');
             } else if (activeTab === 'chat') {
                 const response = await fetch('/api/chat', {
                     method: 'POST',
@@ -48,6 +144,25 @@ function App() {
             console.error('Search failed:', error);
         } finally {
             setLoading(false);
+            setIsAiProcessing(false);
+        }
+    };
+
+    const handleSaveFromWeb = async (url, title) => {
+        try {
+            const response = await fetch('/api/save-from-web', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url, filename: title })
+            });
+            if (response.ok) {
+                setSavedUrls(prev => new Set([...prev, url]));
+                fetchLibrary();
+            } else {
+                alert('No se pudo guardar el archivo. Verifica el link.');
+            }
+        } catch (error) {
+            console.error('Save failed:', error);
         }
     };
 
@@ -132,89 +247,234 @@ function App() {
                 </div>
 
                 <div className={`backdrop-blur-md rounded-2xl p-6 shadow-xl border border-white/5 ${t.card}`}>
-                    {/* API Key Settings */}
-                    {activeTab === 'chat' && (
-                        <div className="mb-6 max-w-md mx-auto">
-                            <input
-                                type="password"
-                                placeholder="Google Gemini API Key (Opcional si ya configurada)"
-                                value={apiKey}
-                                onChange={(e) => saveApiKey(e.target.value)}
-                                className={`w-full px-4 py-2 text-sm rounded-lg outline-none ${t.input}`}
-                            />
-                        </div>
-                    )}
+                    <SearchBar
+                        onSearch={handleSearch}
+                        theme={t}
+                        searchMode={activeTab === 'chat' ? 'local' : activeTab}
+                        onModeChange={(mode) => setActiveTab(mode)}
+                    />
 
-                    <SearchBar onSearch={handleSearch} theme={t} />
-
-                    {/* Scan Settings */}
                     {activeTab === 'local' && (
-                        <div className={`mt-8 p-4 rounded-xl border ${t.header}`}>
-                            <h2 className={`text-sm font-semibold mb-3 ${t.headerText}`}>Escanear Carpeta</h2>
-                            <div className="flex gap-2">
+                        <div className="mt-6 flex flex-wrap gap-4 items-center justify-between border-t border-white/10 pt-6">
+                            <div className="flex gap-4">
                                 <input
-                                    type="text"
-                                    placeholder="Ruta de carpeta (ej: C:\Libros)"
-                                    className={`flex-1 px-4 py-2 rounded-lg outline-none ${t.input}`}
-                                    id="scanPath"
+                                    type="file"
+                                    accept=".pdf"
+                                    onChange={handleUpload}
+                                    className="hidden"
+                                    id="file-upload"
                                 />
-                                <button
-                                    onClick={() => handleScan(document.getElementById('scanPath').value)}
-                                    className={`px-4 py-2 rounded-lg transition-colors ${t.buttonSecondary}`}
+                                <label
+                                    htmlFor="file-upload"
+                                    className={`px-4 py-2 rounded-lg cursor-pointer transition-all flex items-center gap-2 ${t.buttonPrimary}`}
                                 >
-                                    Escanear
+                                    {isUploading ? 'Subiendo...' : '＋ Añadir PDF'}
+                                </label>
+
+                                <button
+                                    onClick={() => setShowLibrary(!showLibrary)}
+                                    className={`px-4 py-2 rounded-lg transition-all ${t.buttonSecondary}`}
+                                >
+                                    {showLibrary ? 'Ocultar Biblioteca' : 'Ver Biblioteca'}
                                 </button>
                             </div>
-                            {scanStatus && <p className={`mt-2 text-sm ${t.highlight}`}>{scanStatus}</p>}
+
+                            {activeTab === 'chat' && (
+                                <input
+                                    type="password"
+                                    placeholder="API Key (Opcional)"
+                                    value={apiKey}
+                                    onChange={(e) => {
+                                        setApiKey(e.target.value);
+                                        localStorage.setItem('gemini_api_key', e.target.value);
+                                    }}
+                                    className={`px-4 py-2 text-sm rounded-lg outline-none ${t.input}`}
+                                />
+                            )}
                         </div>
                     )}
                 </div>
 
+                {/* Library Grid */}
+                {activeTab === 'local' && showLibrary && library.length > 0 && (
+                    <div className="mt-8">
+                        <h2 className={`text-sm font-bold uppercase tracking-widest opacity-60 mb-6 flex items-center gap-2 ${t.text}`}>
+                            📚 Tu Biblioteca
+                        </h2>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                            {library.map(book => (
+                                <div
+                                    key={book.doc_id}
+                                    className={`group relative flex flex-col items-center p-4 rounded-3xl transition-all hover:scale-105 border ${t.card} aspect-[3/4] justify-between text-center overflow-hidden`}
+                                >
+                                    {/* Icon / Action Overlay */}
+                                    <div className="relative w-full aspect-square flex items-center justify-center bg-black/20 rounded-2xl mb-3 overflow-hidden">
+                                        <span className="text-3xl font-black opacity-20 group-hover:opacity-10 transition-opacity">PDF</span>
+
+                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
+                                            <button
+                                                onClick={() => handleSummarize(book.doc_id)}
+                                                className="w-full py-1.5 bg-indigo-500 text-white text-[10px] font-bold rounded-lg hover:bg-indigo-400"
+                                            >
+                                                ✨ RESUMIR
+                                            </button>
+                                            <button
+                                                onClick={() => handleTranslate(book.doc_id)}
+                                                className="w-full py-1.5 bg-emerald-500 text-white text-[10px] font-bold rounded-lg hover:bg-emerald-400"
+                                            >
+                                                🌐 TRADUCIR
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(book.doc_id)}
+                                                className="w-full py-1.5 bg-red-500 text-white text-[10px] font-bold rounded-lg hover:bg-red-400"
+                                            >
+                                                🗑️ BORRAR
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="w-full">
+                                        <h3 className={`text-xs font-bold leading-tight truncate px-1 ${t.headerText}`}>
+                                            {book.filename}
+                                        </h3>
+                                        <p className="text-[10px] opacity-40 mt-1 uppercase tracking-tighter">
+                                            {book.total_pages} páginas
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Summary Modal/Box */}
+                {!loading && bookSummary && (
+                    <div className="mt-8 p-6 rounded-3xl border border-indigo-500/30 bg-indigo-900/10 backdrop-blur-xl relative">
+                        <button
+                            onClick={() => setBookSummary(null)}
+                            className="absolute top-4 right-4 text-xs opacity-50 hover:opacity-100"
+                        >
+                            Cerrar [x]
+                        </button>
+                        <h3 className="text-sm font-black text-indigo-300 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            Resumen del Documento
+                        </h3>
+                        <div className={`prose max-w-none text-sm leading-relaxed ${t.text}`}>
+                            {bookSummary}
+                        </div>
+                    </div>
+                )}
+
                 {/* Content Area */}
-                <div className="mt-8 space-y-4 pb-20">
+                <div className="mt-8 space-y-6 pb-20">
                     {loading && (
                         <div className="text-center py-12">
                             <div className={`animate-spin rounded-full h-12 w-12 border-b-2 mx-auto ${t.text} border-current opacity-50`}></div>
-                            <p className={`mt-4 ${t.text} opacity-70`}>Buscando...</p>
+                            <p className={`mt-4 ${t.text} opacity-70`}>{isAiProcessing ? 'IA pensando y buscando...' : 'Buscando...'}</p>
                         </div>
                     )}
 
-                    {/* Chat Response */}
+                    {/* AI Response Block (for Local/Web Search) */}
+                    {!loading && aiResponse && (
+                        <div className={`p-6 rounded-2xl shadow-lg border border-indigo-500/30 bg-indigo-900/10 backdrop-blur-md relative overflow-hidden group`}>
+                            <div className="absolute top-0 right-0 p-2 opacity-20">✨</div>
+                            <h3 className="text-sm font-bold text-indigo-300 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                <span className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></span>
+                                Resumen Inteligente
+                            </h3>
+                            <div className={`prose max-w-none whitespace-pre-wrap leading-relaxed ${t.text}`}>
+                                {aiResponse}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Chat Response (Dedicated Chat Tab) */}
                     {!loading && activeTab === 'chat' && chatResponse && (
-                        <div className={`p-6 rounded-xl shadow-lg border border-purple-500/30 bg-purple-900/20 backdrop-blur-sm`}>
-                            <h3 className="text-sm font-bold text-purple-300 uppercase tracking-wide mb-2">Respuesta IA</h3>
-                            <div className={`prose max-w-none whitespace-pre-wrap ${t.text}`}>
+                        <div className={`p-6 rounded-2xl shadow-lg border border-purple-500/30 bg-purple-900/10 backdrop-blur-md`}>
+                            <h3 className="text-sm font-bold text-purple-300 uppercase tracking-widest mb-3">Respuesta IA</h3>
+                            <div className={`prose max-w-none whitespace-pre-wrap leading-relaxed ${t.text}`}>
                                 {chatResponse}
                             </div>
                         </div>
                     )}
 
-                    {/* Search Results */}
-                    {!loading && activeTab !== 'chat' && (
-                        results.map((result, index) => (
-                            activeTab === 'web' ? (
-                                <div key={index} className={`p-4 rounded-xl shadow-md border transition-all hover:scale-[1.01] ${t.card}`}>
-                                    <h3 className={`text-lg font-bold truncate ${t.highlight}`}>
-                                        <a href={result.url} target="_blank" rel="noopener noreferrer">{result.title}</a>
-                                    </h3>
-                                    <p className={`text-xs opacity-60 mb-2 ${t.text}`}>{result.url}</p>
-                                    <p className={`text-sm opacity-90 ${t.text}`}>{result.snippet}</p>
-                                </div>
-                            ) : (
-                                <div key={`${result.filename}-${result.page}-${index}`} className={`p-4 rounded-xl shadow-md border transition-all hover:scale-[1.01] ${t.card}`}>
-                                    <div className="flex justify-between items-start mb-2">
-                                        <h3 className={`text-md font-bold ${t.headerText}`}>{result.filename}</h3>
-                                        <span className={`text-xs px-2 py-1 rounded-full ${t.buttonSecondary}`}>Pág {result.page}</span>
+                    {/* Sources / Results */}
+                    {!loading && results.length > 0 && (
+                        <div className="space-y-4">
+                            <h3 className={`text-xs font-bold uppercase tracking-wider opacity-50 ml-1 ${t.text}`}>
+                                {activeTab === 'web' ? 'Resultados Web' : 'Documentos Encontrados'}
+                            </h3>
+                            {results.map((result, index) => (
+                                activeTab === 'web' ? (
+                                    <div key={index} className={`p-5 rounded-2xl shadow-md border transition-all hover:shadow-lg ${t.card} relative overflow-hidden`}>
+                                        {result.is_pdf && (
+                                            <div className="absolute top-0 right-0 px-3 py-1 bg-red-500 text-white text-[10px] font-bold rounded-bl-xl uppercase tracking-tighter">
+                                                PDF Detected
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-[10px] opacity-40 uppercase tracking-widest truncate max-w-[200px]">
+                                                {(() => {
+                                                    try { return new URL(result.url).hostname; }
+                                                    catch (e) { return 'Enlace'; }
+                                                })()}
+                                            </span>
+                                        </div>
+                                        <h3 className={`text-xl font-bold mb-2 ${t.highlight} leading-tight`}>
+                                            <a href={result.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                                                {result.title}
+                                            </a>
+                                        </h3>
+                                        <p className={`text-xs opacity-50 mb-3 truncate font-mono ${t.text}`}>{result.url}</p>
+                                        <p className={`text-sm opacity-90 leading-relaxed line-clamp-2 ${t.text}`}>
+                                            {result.snippet}
+                                        </p>
+
+                                        <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
+                                            <div className="flex gap-3">
+                                                <a
+                                                    href={result.url}
+                                                    target="_blank"
+                                                    className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 hover:text-indigo-300"
+                                                >
+                                                    Ver en Navegador ↗
+                                                </a>
+                                                {result.is_pdf && (
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
+                                                        Contenido PDF ✓
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <button
+                                                onClick={() => handleSaveFromWeb(result.url, result.title)}
+                                                disabled={savedUrls.has(result.url)}
+                                                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${savedUrls.has(result.url) ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'}`}
+                                            >
+                                                {savedUrls.has(result.url) ? (
+                                                    <>✓ GUARDADO</>
+                                                ) : (
+                                                    <>💾 GUARDAR</>
+                                                )}
+                                            </button>
+                                        </div>
                                     </div>
-                                    <p className={`text-sm italic opacity-80 ${t.text}`}>"...{result.snippet}..."</p>
-                                </div>
-                            )
-                        ))
+                                ) : (
+                                    <div key={`${result.filename}-${result.page}-${index}`} className={`p-4 rounded-xl shadow-md border transition-all hover:scale-[1.01] ${t.card}`}>
+                                        <div className="flex justify-between items-start mb-2">
+                                            <h3 className={`text-md font-bold ${t.headerText}`}>{result.filename}</h3>
+                                            <span className={`text-xs px-2 py-1 rounded-full ${t.buttonSecondary}`}>Pág {result.page}</span>
+                                        </div>
+                                        <p className={`text-sm italic opacity-80 ${t.text}`}>"...{result.snippet}..."</p>
+                                    </div>
+                                )
+                            ))}
+                        </div>
                     )}
 
-                    {!loading && !chatResponse && results.length === 0 && (
+                    {!loading && !chatResponse && !aiResponse && results.length === 0 && (
                         <div className="text-center py-12 opacity-50">
-                            <p className={t.text}>{activeTab === 'chat' ? 'Pregúntale a tus libros...' : 'Listo para buscar.'}</p>
+                            <p className={t.text}>{activeTab === 'chat' ? 'Pregúntale a tus libros...' : 'Escribe algo para realizar una búsqueda inteligente.'}</p>
                         </div>
                     )}
                 </div>
