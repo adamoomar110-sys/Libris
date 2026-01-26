@@ -8,7 +8,7 @@ from library import library_manager
 from fastapi import UploadFile, File
 import shutil
 
-app = FastAPI(title="Libris API", version="1.0")
+app = FastAPI(title="Libris API", version="1.5")
 
 @app.get("/health")
 def health_check():
@@ -195,7 +195,18 @@ async def startup_event():
     print(f"Libris Backend starting...")
     print(f"Base dir: {base_dir}")
     print(f"Frontend dist path: {frontend_dist}")
-    print(f"Frontend dist exists: {os.path.exists(frontend_dist)}")
+    
+    # Reload search index
+    print("Loading library into search index...")
+    books = library_manager.get_library()
+    count = 0 
+    for book in books:
+        # We need the full content to index, so we get the full book
+        full_book = library_manager.get_book(book['doc_id'])
+        if full_book and full_book.get('content'):
+            search_engine.add_document(full_book['filename'], full_book['content'])
+            count += 1
+    print(f"Loaded {count} books into search index.")
 
 # All your API routes here... (already defined)
 

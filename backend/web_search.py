@@ -7,7 +7,7 @@ def search_web_pdfs(query: str, max_results=10):
     """
     results = []
     # Search patterns
-    patterns = [f"{query} filetype:pdf", f"{query} ext:pdf", query]
+    patterns = [f"{query} filetype:pdf", f"{query} ext:pdf"]
     
     try:
         with DDGS() as ddgs:

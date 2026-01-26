@@ -480,8 +480,20 @@ function App() {
                 </div>
             </div>
 
+            <div className="flex flex-col items-center gap-3 mb-6 relative z-10">
+                <a
+                    href="https://wa.me/5491100000000"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 bg-[#25D366] text-white rounded-full font-bold shadow-lg hover:scale-105 transition-transform hover:shadow-[#25D366]/50"
+                >
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="css-i6dzq1"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                    <span>Consultas por WhatsApp</span>
+                </a>
+            </div>
+
             <footer className={`w-full text-center p-8 mt-auto text-xs opacity-60 ${t.text} relative z-10`}>
-                <p>Libris v1.0 &copy; {new Date().getFullYear()} Adamo. All rights reserved.</p>
+                <p>Libris v1.5 &copy; {new Date().getFullYear()} Adamo. All rights reserved.</p>
             </footer>
         </div>
     );

@@ -127,7 +127,22 @@ if __name__ == "__main__":
         os.chdir(backend_dir)
         
         # Run Uvicorn
-        uvicorn.run("main:app", host="0.0.0.0", port=PORT, reload=False)
+        # Run Uvicorn
+        try:
+            uvicorn.run("main:app", host="0.0.0.0", port=PORT, reload=False)
+        except SystemExit:
+            pass
+    except OSError as e:
+        if e.errno == 10048:
+            print("\n" + "!"*60)
+            print(f"ERROR: Port {PORT} is already in use!")
+            print(f"The App is probably already running in another window.")
+            print("Please find and close the existing 'Libris Server' window.")
+            print("!"*60 + "\n")
+            time.sleep(5)
+            # Do not re-raise to avoid ugly traceback
+        else:
+            raise e
     except Exception as e:
         print("\n" + "!"*60)
         print(f"FATAL ERROR: {e}")

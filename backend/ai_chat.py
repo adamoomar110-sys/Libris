@@ -10,7 +10,8 @@ def get_model(api_key: str):
     if not final_key:
         raise ValueError("API Key is required.")
     genai.configure(api_key=final_key)
-    return genai.GenerativeModel('gemini-1.5-flash')
+    # Updated to a more stable model version to avoid 404 on v1beta
+    return genai.GenerativeModel('gemini-1.5-flash-001')
 
 def chat_with_library(query: str, api_key: str):
     """
