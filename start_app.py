@@ -11,7 +11,10 @@ import argparse
 # --- CONFIGURATION ---
 PORT = 8001  # Different port for Libris
 # Use the second account token provided by the user
-NGROK_AUTH_TOKEN = "38cZZ5NMUYqvzMVhHXOEXmUMPel_7KCxuU4VM6Caf5MQe1TH7" 
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
+NGROK_AUTH_TOKEN = os.getenv("NGROK_AUTH_TOKEN") 
 
 def start_ngrok_thread():
     print("Waiting for server to start before opening tunnel...")
