@@ -4,3 +4,25 @@ __pycache__/
 .env
 dist/
 build/
+
+
+# Privacidad (Bloqueado automáticamente)
+.env
+.env.*
+
+# Bases de datos y caches
+*.db
+*.sqlite3
+__pycache__/
+*.pyc
+
+# Entornos Virtuales
+venv/
+env/
+.venv/
+
+# Node
+node_modules/
+.next/
+dist/
+build/
