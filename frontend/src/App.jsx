@@ -493,7 +493,7 @@ function App() {
             </div>
 
             <footer className={`w-full text-center p-8 mt-auto text-xs opacity-60 ${t.text} relative z-10`}>
-                <p>Libris v1.5 &copy; {new Date().getFullYear()} Adamo. All rights reserved.</p>
+                <p>Libris v1.6 &copy; {new Date().getFullYear()} Adamo. All rights reserved.</p>
             </footer>
         </div>
     );

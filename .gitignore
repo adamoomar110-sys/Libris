@@ -1,28 +1,20 @@
-node_modules/
+# Python
 __pycache__/
-*.pyc
-.env
-dist/
-build/
-
-
-# Privacidad (Bloqueado automáticamente)
-.env
-.env.*
-
-# Bases de datos y caches
-*.db
-*.sqlite3
-__pycache__/
-*.pyc
-
-# Entornos Virtuales
+*.py[cod]
+*$py.class
 venv/
-env/
-.venv/
+.env
 
 # Node
 node_modules/
-.next/
 dist/
-build/
+dist-ssr/
+*.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+Desktop.ini
